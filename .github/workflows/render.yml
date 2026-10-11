@@ -48,7 +48,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg fonts-noto-cjk >/dev/null
-          pip install -q requests pillow edge-tts
+          pip install -q requests beautifulsoup4 pillow edge-tts
 
       - name: 렌더링
         id: r
