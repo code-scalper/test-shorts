@@ -1,0 +1,55 @@
+name: 1. 블로그 수집
+
+# posts/<id>/source.txt 가 push 되면(또는 수동 실행 시 URL 입력) 글·사진을 수집해 커밋한다.
+on:
+  push:
+    branches: [main]
+    paths: ["posts/*/source.txt"]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "네이버 블로그 글 URL"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repo-write
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install requests beautifulsoup4
+
+      - name: 수동 실행이면 source.txt 생성
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          URL: ${{ github.event.inputs.url }}
+        run: |
+          id=$(python tools/pending.py new-id "$URL")
+          mkdir -p "posts/$id"
+          printf '%s\n' "$URL" > "posts/$id/source.txt"
+
+      - name: 수집
+        run: |
+          targets=$(python tools/pending.py fetch)
+          echo "대상: ${targets:-없음}"
+          for d in $targets; do python tools/fetch_post.py "$d"; done
+
+      - name: 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add posts
+          git diff --cached --quiet && { echo "변경 없음"; exit 0; }
+          git commit -m "fetch: $(git diff --cached --name-only | grep post.json | xargs -r -n1 dirname | xargs -r -n1 basename | tr '\n' ' ')"
+          for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done

@@ -1,0 +1,99 @@
+name: 2. 쇼츠 렌더링
+
+# posts/<id>/script.json 이 push 되면 렌더링한다.
+#  - 결과물은 renders 브랜치의 posts/<id>/out/ 과 Actions 아티팩트로 올라간다.
+#  - script.json 의 status 가 "final" 이면 GitHub Release 로도 게시한다.
+on:
+  push:
+    branches: [main]
+    paths: ["posts/*/script.json"]
+  workflow_dispatch:
+    inputs:
+      post:
+        description: "강제로 다시 렌더할 폴더 (예: posts/namunulbo7-222200255013). 비우면 미렌더 버전 전부"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repo-write
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: renders 브랜치 체크아웃 (없으면 생성)
+        run: |
+          if git ls-remote --exit-code --heads origin renders >/dev/null; then
+            git fetch -q origin renders
+            git worktree add renders origin/renders
+            git -C renders checkout -q -B renders origin/renders
+          else
+            git worktree add --detach renders
+            git -C renders checkout -q --orphan renders
+            git -C renders rm -rq --cached . || true
+            find renders -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 도구 설치
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-noto-cjk >/dev/null
+          pip install -q requests pillow edge-tts
+
+      - name: 렌더링
+        id: r
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
+          FORCE: ${{ github.event.inputs.post }}
+        run: |
+          targets="${FORCE:-$(python tools/pending.py render renders)}"
+          echo "대상: ${targets:-없음}"
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+          for d in $targets; do
+            python tools/render.py "$d"
+            mkdir -p "renders/$d/out"
+            cp "$d"/out/* "renders/$d/out/"
+            cp "$d/script.json" "renders/$d/out/script_v$(python -c "import json;print(json.load(open('$d/script.json')).get('version',1))").json"
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: steps.r.outputs.targets != ''
+        with:
+          name: shorts-${{ github.run_number }}
+          path: posts/*/out/*
+          retention-days: 14
+
+      - name: renders 브랜치에 커밋
+        if: steps.r.outputs.targets != ''
+        run: |
+          cd renders
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -qm "render: ${{ steps.r.outputs.targets }} (run ${{ github.run_number }})"
+          for i in 1 2 3; do git push origin HEAD:renders && break; git pull --rebase -q origin renders; sleep 5; done
+
+      - name: 최종본이면 Release 게시
+        if: steps.r.outputs.targets != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for d in ${{ steps.r.outputs.targets }}; do
+            read -r status ver title < <(python -c "import json;s=json.load(open('$d/script.json'));print(s.get('status','draft'),s.get('version',1),s.get('title',''))")
+            [ "$status" = "final" ] || continue
+            id=$(basename "$d")
+            gh release create "$id-v$ver" "$d/out/short_v$ver.mp4" "$d/out/captions_v$ver.srt" "$d/out/thumb_v$ver.jpg" \
+              --title "$title (최종 v$ver)" --notes "원문: $(head -1 $d/source.txt)" || echo "release 이미 존재"
+          done
