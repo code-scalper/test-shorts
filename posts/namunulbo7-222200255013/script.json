@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "status": "draft",
+  "lang": "ko",
+  "title": "작심삼일러의 2021년 첫 주",
+  "title_seconds": 0,
+  "voice": { "voice_id": "", "edge_voice": "ko-KR-SunHiNeural" },
+  "bgm": null,
+  "scenes": [
+    { "image": "images/01.jpg", "text": "2020년 마지막 식사는 동생이 추천한 국밥집. 돼지국밥이 맛있다고 했는데, 내장국밥을 시켜버렸다.", "motion": "zoom-in" },
+    { "image": "images/06.jpg", "text": "2021년 첫 끼는 늘 그렇듯 감바스. 면 양 조절은 또 실패.", "motion": "zoom-out" },
+    { "image": "images/08.jpg", "text": "숙원 사업이던 수전 교체 완료. 그로헤 대신 이케아로, 배수구까지 골드 깔맞춤 성공!", "motion": "pan-right" },
+    { "image": "images/10.jpg", "text": "밤 열두 시에 굽기 시작한 쿠키. 얼그레이에 마시멜로, 로투스까지 다 넣었다.", "motion": "zoom-in" },
+    { "image": "images/18.jpg", "text": "햇살 가득한 나만의 홈 오피스. 짐이 자꾸 늘어나는 건 함정.", "motion": "pan-left" },
+    { "image": "images/19.jpg", "text": "점심시간, 우리 고양이는 거실 햇살에 등짝을 지지는 중.", "motion": "zoom-out" },
+    { "image": "images/22.jpg", "text": "1월 7일, 눈폭탄이 쏟아진 날. 양말도 안 신고 개랑 신나게 뛰어다녔다.", "motion": "pan-up" },
+    { "image": "images/24.jpg", "text": "아침에 일어나니 온 세상이 겨울왕국.", "motion": "pan-right" },
+    { "image": "images/25.jpg", "text": "마당에 나간 마루, 짧은 다리가 눈에 파묻혀 사라졌다.", "motion": "zoom-in" },
+    { "image": "images/28.jpg", "text": "마루 네 번째 생일 선물로 산 방석은, 결국 고양이 형이 차지했다. 이번 주 일기 끝!", "motion": "zoom-out" }
+  ]
+}
